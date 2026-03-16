@@ -13,6 +13,16 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="FacePhoto API")
 
+# Global scan status tracking
+scan_status = {
+    "is_active": False,
+    "current": 0,
+    "total": 0,
+    "status": "Idle",
+    "directory": "",
+    "errors": []
+}
+
 @app.get("/", response_class=HTMLResponse)
 def read_root():
     with open("static/index.html", "r") as f:
@@ -43,12 +53,47 @@ def browse_directory():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to open folder dialog: {str(e)}")
 
+def run_scan(directory: str):
+    global scan_status
+    scan_status["is_active"] = True
+    scan_status["directory"] = directory
+    scan_status["status"] = "Preparing..."
+    scan_status["current"] = 0
+    scan_status["total"] = 0
+    scan_status["errors"] = []
+    
+    try:
+        def update_progress(current, total, status_text=None, errors=None):
+            scan_status["current"] = current
+            scan_status["total"] = total
+            if errors:
+                scan_status["errors"] = errors
+            if status_text:
+                scan_status["status"] = status_text
+            else:
+                scan_status["status"] = f"Processing {current}/{total}"
+
+        process_directory(directory, progress_callback=update_progress)
+        scan_status["status"] = "Completed"
+    except Exception as e:
+        scan_status["status"] = f"Error: {str(e)}"
+    finally:
+        scan_status["is_active"] = False
+
 @app.post("/api/scan")
 def scan_directory(directory: str, background_tasks: BackgroundTasks):
     if not os.path.exists(directory) or not os.path.isdir(directory):
         raise HTTPException(status_code=400, detail="Invalid directory path")
-    background_tasks.add_task(process_directory, directory)
+    
+    if scan_status["is_active"]:
+        raise HTTPException(status_code=400, detail="A scan is already in progress")
+        
+    background_tasks.add_task(run_scan, directory)
     return {"status": "Scanning started", "directory": directory}
+
+@app.get("/api/scan/progress")
+def get_scan_progress():
+    return scan_status
 
 @app.get("/api/groups")
 def get_groups(db: Session = Depends(get_db)):
@@ -163,3 +208,5 @@ def delete_person(person_id: int, db: Session = Depends(get_db)):
     db.delete(person)
     db.commit()
     return {"status": "Person deleted", "id": person_id}
+
+app.mount("/", StaticFiles(directory="static"), name="static")

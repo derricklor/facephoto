@@ -10,56 +10,8 @@
             darkMode: 'class',
         }
     </script>
-    <style>
-        .selected-person { border: 2px solid #2563eb; background-color: #eff6ff; }
-        .dark .selected-person { border-color: #3b82f6; background-color: #1e293b; }
-        
-        .merge-target { border: 2px solid #10b981; background-color: #ecfdf5; }
-        .dark .merge-target { border-color: #10b981; background-color: #064e3b; }
-        
-        /* Zoom Overlay Styles */
-        #zoom-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            cursor: zoom-out;
-        }
-        #zoom-img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            user-select: none;
-        }
-        #close-zoom {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            line-height: 1;
-            z-index: 1001;
-        }
-
-        .photo-card { position: relative; }
-        .photo-checkbox {
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            z-index: 10;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 min-h-screen transition-colors duration-300">
     <nav class="bg-blue-600 dark:bg-slate-800 text-white p-4 shadow-md sticky top-0 z-40">
@@ -99,6 +51,19 @@
             </div>
         </div>
     </nav>
+
+    <!-- Scan Progress Bar -->
+    <div id="scan-progress-container" class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 hidden">
+        <div class="container mx-auto px-8 py-4">
+            <div class="flex justify-between items-center mb-2">
+                <span id="scan-status-text" class="text-sm font-semibold text-gray-700 dark:text-slate-300">Processing photos...</span>
+                <span id="scan-percentage" class="text-sm font-bold text-blue-600 dark:text-blue-400">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                <div id="scan-progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
 
     <main class="container mx-auto p-8 flex gap-8 flex-grow">
         <!-- Sidebar for People -->
@@ -243,343 +208,23 @@
         <img id="zoom-img" src="" alt="Zoomed Photo">
     </div>
 
-    <script>
-        const peopleList = document.getElementById('people-list');
-        const photoGrid = document.getElementById('photo-grid');
-        const scanBtn = document.getElementById('scan-btn');
-        const browseBtn = document.getElementById('browse-btn');
-        const dirInput = document.getElementById('dir-input');
-        const galleryTitle = document.getElementById('gallery-title');
-        
-        const controlPanel = document.getElementById('control-panel');
-        const openRenameBtn = document.getElementById('open-rename-btn');
-        const exportPersonBtn = document.getElementById('export-person-btn');
-        const deletePersonBtn = document.getElementById('delete-person-btn');
-        
-        const renameModal = document.getElementById('rename-modal');
-        const renameInput = document.getElementById('rename-input');
-        const cancelRenameBtn = document.getElementById('cancel-rename-btn');
-        const confirmRenameBtn = document.getElementById('confirm-rename-btn');
+    <!-- Info/Alert Modal -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-[60]">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-[32rem] max-h-[80vh] flex flex-col">
+            <h3 id="info-modal-title" class="text-lg font-bold mb-4 dark:text-slate-200">Notification</h3>
+            <div id="info-modal-content" class="flex-grow overflow-y-auto mb-6">
+                <p id="info-modal-message" class="text-sm text-gray-600 dark:text-slate-400"></p>
+                <div id="info-modal-list" class="mt-4 space-y-2 hidden">
+                    <!-- Error list will be injected here -->
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 shrink-0">
+                <button id="info-cancel-btn" class="px-4 py-2 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded font-semibold transition hidden">Cancel</button>
+                <button id="info-ok-btn" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded font-semibold transition">OK</button>
+            </div>
+        </div>
+    </div>
 
-        const openMergeBtn = document.getElementById('open-merge-btn');
-        const moveModal = document.getElementById('move-modal');
-        const movePeopleList = document.getElementById('move-people-list');
-        const cancelMoveBtn = document.getElementById('cancel-move-btn');
-        const confirmMoveBtn = document.getElementById('confirm-move-btn');
-        const moveModalTitle = document.getElementById('move-modal-title');
-        const moveModalDesc = document.getElementById('move-modal-desc');
-
-        const bulkActions = document.getElementById('bulk-actions');
-        const selectionCount = document.getElementById('selection-count');
-        const bulkMoveBtn = document.getElementById('bulk-move-btn');
-        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
-        const clearSelectionBtn = document.getElementById('clear-selection-btn');
-
-        const zoomOverlay = document.getElementById('zoom-overlay');
-        const zoomImg = document.getElementById('zoom-img');
-        const closeZoom = document.getElementById('close-zoom');
-        
-        const darkModeToggle = document.getElementById('dark-mode-toggle');
-        const sunIcon = document.getElementById('sun-icon');
-        const moonIcon = document.getElementById('moon-icon');
-
-        let selectedGroup = null;
-        let moveTargetGroup = null;
-        let allGroups = [];
-        let selectedPhotoIds = [];
-        let isBulkMode = false;
-
-        // Dark Mode Logic
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-            sunIcon.classList.remove('hidden');
-            moonIcon.classList.add('hidden');
-        }
-
-        darkModeToggle.onclick = () => {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.theme = 'light';
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.theme = 'dark';
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
-            }
-        };
-
-        async function fetchGroups() {
-            const res = await fetch('/api/groups');
-            allGroups = await res.json();
-            renderPeople(allGroups);
-            
-            if (selectedGroup) {
-                const updated = allGroups.find(g => g.id === selectedGroup.id);
-                if (updated) {
-                    selectPerson(updated);
-                } else {
-                    selectedGroup = null;
-                    controlPanel.classList.add('hidden');
-                    photoGrid.innerHTML = '';
-                    galleryTitle.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-blue-500 inline mr-2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                        </svg>
-                        All Photos
-                    `;
-                }
-            }
-        }
-
-        function renderPeople(groups) {
-            peopleList.innerHTML = '';
-            if (groups.length === 0) {
-                peopleList.innerHTML = '<p class="text-gray-500 italic dark:text-slate-400">No people identified yet.</p>';
-                return;
-            }
-
-            groups.forEach(group => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg shadow cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition person-item';
-                div.dataset.id = group.id;
-                if (selectedGroup && selectedGroup.id === group.id) {
-                    div.classList.add('selected-person');
-                }
-                
-                div.onclick = () => selectPerson(group);
-                
-                div.innerHTML = `
-                    <img src="/api/image?path=${encodeURIComponent(group.thumbnail)}" class="w-12 h-12 rounded-full object-cover bg-gray-200 dark:bg-slate-700">
-                    <div>
-                        <p class="font-semibold dark:text-slate-200">${group.name}</p>
-                        <p class="text-sm text-gray-500 dark:text-slate-400">${group.photo_count} photos</p>
-                    </div>
-                `;
-                peopleList.appendChild(div);
-            });
-        }
-
-        function selectPerson(group) {
-            selectedGroup = group;
-            clearSelection();
-            
-            document.querySelectorAll('.person-item').forEach(el => {
-                el.classList.toggle('selected-person', parseInt(el.dataset.id) === group.id);
-            });
-            
-            controlPanel.classList.remove('hidden');
-            renderPhotos(group);
-        }
-
-        function renderPhotos(group) {
-            galleryTitle.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-blue-500 inline mr-2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
-                Photos of ${group.name}
-            `;
-            photoGrid.innerHTML = '';
-            group.photos.forEach(photo => {
-                const card = document.createElement('div');
-                card.className = 'photo-card group';
-                
-                const imgSrc = `/api/image?path=${encodeURIComponent(photo.path)}`;
-                const img = document.createElement('img');
-                img.src = imgSrc;
-                img.className = 'w-full h-48 object-cover rounded shadow-md hover:opacity-90 transition cursor-zoom-in';
-                img.onclick = (e) => {
-                    e.stopPropagation();
-                    openZoom(imgSrc);
-                };
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'photo-checkbox opacity-0 group-hover:opacity-100 checked:opacity-100 transition-opacity duration-200';
-                checkbox.onclick = (e) => e.stopPropagation();
-                checkbox.onchange = (e) => {
-                    if (e.target.checked) {
-                        selectedPhotoIds.push(photo.id);
-                    } else {
-                        selectedPhotoIds = selectedPhotoIds.filter(id => id !== photo.id);
-                    }
-                    updateBulkUI();
-                };
-
-                card.appendChild(img);
-                card.appendChild(checkbox);
-                photoGrid.appendChild(card);
-            });
-        }
-
-        function updateBulkUI() {
-            if (selectedPhotoIds.length > 0) {
-                bulkActions.classList.remove('hidden');
-                selectionCount.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    ${selectedPhotoIds.length} selected
-                `;
-            } else {
-                bulkActions.classList.add('hidden');
-            }
-        }
-
-        function clearSelection() {
-            selectedPhotoIds = [];
-            document.querySelectorAll('.photo-checkbox').forEach(cb => cb.checked = false);
-            updateBulkUI();
-        }
-
-        clearSelectionBtn.onclick = clearSelection;
-
-        function openZoom(src) {
-            zoomImg.src = src;
-            zoomOverlay.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeZoomOverlay() {
-            zoomOverlay.style.display = 'none';
-            zoomImg.src = '';
-            document.body.style.overflow = 'auto';
-        }
-
-        zoomOverlay.onclick = closeZoomOverlay;
-        closeZoom.onclick = (e) => { e.stopPropagation(); closeZoomOverlay(); };
-
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeZoomOverlay(); });
-
-        browseBtn.onclick = async () => {
-            const res = await fetch('/api/browse');
-            const data = await res.json();
-            if (data.path) {
-                dirInput.value = data.path;
-            }
-        };
-
-        scanBtn.onclick = async () => {
-            const dir = dirInput.value;
-            if (!dir) return alert('Please enter a directory path');
-            const res = await fetch('/api/scan?directory=' + encodeURIComponent(dir), { method: 'POST' });
-            if (res.ok) {
-                alert('Scanning started! Please wait a few minutes and refresh.');
-                setTimeout(fetchGroups, 5000);
-            }
-        };
-
-        // Rename logic
-        openRenameBtn.onclick = () => {
-            if (!selectedGroup) return;
-            renameInput.value = selectedGroup.name;
-            renameModal.classList.remove('hidden');
-            renameInput.focus();
-        };
-
-        cancelRenameBtn.onclick = () => renameModal.classList.add('hidden');
-
-        confirmRenameBtn.onclick = async () => {
-            const newName = renameInput.value.trim();
-            if (!newName || !selectedGroup) return;
-            const res = await fetch(`/api/groups/${selectedGroup.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newName })
-            });
-            if (res.ok) {
-                renameModal.classList.add('hidden');
-                await fetchGroups();
-            }
-        };
-
-        // Bulk / Merge logic
-        function openMoveModal(title, desc, onConfirm) {
-            moveModalTitle.innerText = title;
-            moveModalDesc.innerText = desc;
-            moveTargetGroup = null;
-            confirmMoveBtn.disabled = true;
-            movePeopleList.innerHTML = '';
-            
-            const targets = allGroups.filter(g => g.id !== (isBulkMode ? -1 : selectedGroup.id));
-            targets.forEach(group => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center gap-3 p-2 border dark:border-slate-700 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition merge-target-item';
-                div.onclick = () => {
-                    moveTargetGroup = group;
-                    document.querySelectorAll('.merge-target-item').forEach(el => el.classList.remove('merge-target'));
-                    div.classList.add('merge-target');
-                    confirmMoveBtn.disabled = false;
-                };
-                div.innerHTML = `
-                    <img src="/api/image?path=${encodeURIComponent(group.thumbnail)}" class="w-10 h-10 rounded-full object-cover">
-                    <div><p class="text-sm font-semibold dark:text-slate-200">${group.name}</p></div>
-                `;
-                movePeopleList.appendChild(div);
-            });
-            
-            confirmMoveBtn.onclick = onConfirm;
-            moveModal.classList.remove('hidden');
-        }
-
-        openMergeBtn.onclick = () => {
-            isBulkMode = false;
-            openMoveModal(`Merge ${selectedGroup.name}`, `Select target for merge.`, async () => {
-                const res = await fetch(`/api/groups/${selectedGroup.id}/merge/${moveTargetGroup.id}`, { method: 'POST' });
-                if (res.ok) { moveModal.classList.add('hidden'); selectedGroup = moveTargetGroup; await fetchGroups(); }
-            });
-        };
-
-        bulkMoveBtn.onclick = () => {
-            isBulkMode = true;
-            openMoveModal("Move Selected Photos", `Select person to move ${selectedPhotoIds.length} photos into.`, async () => {
-                const res = await fetch(`/api/photos/bulk`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ photo_ids: selectedPhotoIds, target_person_id: moveTargetGroup.id })
-                });
-                if (res.ok) { moveModal.classList.add('hidden'); clearSelection(); await fetchGroups(); }
-            });
-        };
-
-        bulkDeleteBtn.onclick = async () => {
-            if (!confirm(`Remove ${selectedPhotoIds.length} photos from this group?`)) return;
-            const res = await fetch(`/api/photos/bulk`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ photo_ids: selectedPhotoIds, target_person_id: null })
-            });
-            if (res.ok) { clearSelection(); await fetchGroups(); }
-        };
-
-        cancelMoveBtn.onclick = () => moveModal.classList.add('hidden');
-
-        exportPersonBtn.onclick = async () => {
-            if (!selectedGroup) return;
-            const res = await fetch(`/api/groups/${selectedGroup.id}/export`, { method: 'POST' });
-            const data = await res.json();
-            if (data.status === 'Exported') {
-                alert(`Successfully exported ${data.count} photos to: ${data.destination}`);
-            } else if (data.status === 'Cancelled') {
-                // Do nothing
-            } else {
-                alert('Export failed: ' + (data.detail || 'Unknown error'));
-            }
-        };
-
-        deletePersonBtn.onclick = async () => {
-            if (!confirm(`Delete group "${selectedGroup.name}"?`)) return;
-            const res = await fetch(`/api/groups/${selectedGroup.id}`, { method: 'DELETE' });
-            if (res.ok) { selectedGroup = null; controlPanel.classList.add('hidden'); photoGrid.innerHTML = ''; galleryTitle.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-blue-500 inline mr-2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                </svg>
-                All Photos
-            `; await fetchGroups(); }
-        };
-
-        fetchGroups();
-    </script>
+    <script src="main.js" defer></script>
 </body>
 </html>

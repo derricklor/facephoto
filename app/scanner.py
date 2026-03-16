@@ -18,19 +18,26 @@ def get_image_paths(directory):
 def extract_embeddings(img_path):
     try:
         representations = DeepFace.represent(img_path=img_path, model_name="VGG-Face", enforce_detection=True)
-        return representations
+        return representations, None
     except Exception as e:
-        print(f"Error processing {img_path}: {e}")
-        return []
+        return [], str(e)
 
-def process_directory(directory: str):
+def process_directory(directory: str, progress_callback=None):
     db = SessionLocal()
+    errors = []
     try:
         image_paths = get_image_paths(directory)
+        total_photos = len(image_paths)
         all_embeddings = []
         mapping = [] # stores (photo_id, embedding_index_in_photo, region)
 
-        for path in image_paths:
+        if progress_callback:
+            progress_callback(0, total_photos, "Scanning directory...")
+
+        for idx, path in enumerate(image_paths):
+            if progress_callback:
+                progress_callback(idx, total_photos, f"Processing {os.path.basename(path)}", errors=errors)
+                
             # Check if photo already exists in DB
             photo = db.query(Photo).filter(Photo.path == path).first()
             if not photo:
@@ -41,7 +48,10 @@ def process_directory(directory: str):
             
             # Extract embeddings if not already extracted
             if not photo.embeddings:
-                reps = extract_embeddings(path)
+                reps, err = extract_embeddings(path)
+                if err:
+                    errors.append({"file": os.path.basename(path), "error": err})
+                
                 for i, rep in enumerate(reps):
                     embedding = rep["embedding"]
                     region = rep["facial_area"]
@@ -56,9 +66,14 @@ def process_directory(directory: str):
                     mapping.append((photo.id, 0, face_emb.region))
         
         if all_embeddings:
+            if progress_callback:
+                progress_callback(total_photos, total_photos, "Clustering faces...", errors=errors)
             db.commit()
             # Run clustering
             cluster_faces(all_embeddings, mapping, db)
+        
+        if progress_callback:
+            progress_callback(total_photos, total_photos, "Completed", errors=errors)
             
     finally:
         db.close()
@@ -72,7 +87,7 @@ def cluster_faces(embeddings, mapping, db: Session):
     
     # DBSCAN clustering
     # eps and min_samples might need tuning
-    clustering = DBSCAN(eps=0.6, min_samples=1, metric="cosine").fit(X)
+    clustering = DBSCAN(eps=0.8, min_samples=1, metric="cosine").fit(X)
     labels = clustering.labels_
     
     # Map clusters to people

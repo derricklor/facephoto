@@ -87,7 +87,7 @@ def cluster_faces(embeddings, mapping, db: Session):
     
     # DBSCAN clustering
     # eps and min_samples might need tuning
-    clustering = DBSCAN(eps=0.8, min_samples=1, metric="cosine").fit(X)
+    clustering = DBSCAN(eps=0.6, min_samples=3, metric="cosine").fit(X)
     labels = clustering.labels_
     
     # Map clusters to people

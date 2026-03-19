@@ -209,4 +209,22 @@ def delete_person(person_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "Person deleted", "id": person_id}
 
+@app.delete("/api/clearcache")
+def clear_cache(db: Session = Depends(get_db)):
+    # Query photos with no person_id
+    orphaned_photos = db.query(Photo).filter(Photo.person_id == None).all()
+    photo_ids = [p.id for p in orphaned_photos]
+    
+    if not photo_ids:
+        return {"status": "Cache already clear", "count": 0}
+
+    # Delete face embeddings for these photos
+    db.query(FaceEmbedding).filter(FaceEmbedding.photo_id.in_(photo_ids)).delete(synchronize_session=False)
+    
+    # Delete the photos themselves
+    db.query(Photo).filter(Photo.id.in_(photo_ids)).delete(synchronize_session=False)
+    
+    db.commit()
+    return {"status": "Cache cleared", "count": len(photo_ids)}
+
 app.mount("/", StaticFiles(directory="static"), name="static")

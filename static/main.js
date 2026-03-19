@@ -49,6 +49,12 @@ const scanStatusText = document.getElementById('scan-status-text');
 const scanPercentage = document.getElementById('scan-percentage');
 const scanProgressBar = document.getElementById('scan-progress-bar');
 
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeSettingsBtn = document.getElementById('close-settings-btn');
+const settingsOkBtn = document.getElementById('settings-ok-btn');
+const clearCacheBtn = document.getElementById('clear-cache-btn');
+
 let selectedGroup = null;
 let moveTargetGroup = null;
 let allGroups = [];
@@ -449,6 +455,22 @@ deletePersonBtn.onclick = async () => {
             `; await fetchGroups();
     }
 };
+
+settingsBtn.onclick = () => {settingsModal.classList.remove('hidden');console.log('Open settings modal');};
+closeSettingsBtn.onclick = () => settingsModal.classList.add('hidden');
+settingsOkBtn.onclick = () => settingsModal.classList.add('hidden');
+
+clearCacheBtn.onclick = async () => {
+    if (!(await showInfo('Confirm Cache Clear', 'This will remove all cached face embeddings that are not associated with any person. This can help free up disk space but may cause previously identified photos to be reprocessed on next scan. Proceed?', true))) return;
+    const res = await fetch('/api/clearcache', { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+        await showInfo('Cache Cleared', `${data.status}: Removed ${data.count} orphaned photo entries.`);
+    } else {
+        await showInfo('Clear Failed', 'Failed to clear cache.');
+    }
+};
+
 
 // Check for active scan on load
 pollScanProgress();

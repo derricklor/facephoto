@@ -54,6 +54,7 @@ const settingsModal = document.getElementById('settings-modal');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
 const settingsOkBtn = document.getElementById('settings-ok-btn');
 const clearCacheBtn = document.getElementById('clear-cache-btn');
+const modelSelect = document.getElementById('model-select');
 
 let selectedGroup = null;
 let moveTargetGroup = null;
@@ -332,11 +333,12 @@ async function pollScanProgress() {
 
 scanBtn.onclick = async () => {
     const dir = dirInput.value;
+    const modelName = modelSelect.value;
     if (!dir) {
         await showInfo('Directory Required', 'Please enter a directory path');
         return;
     }
-    const res = await fetch('/api/scan?directory=' + encodeURIComponent(dir), { method: 'POST' });
+    const res = await fetch('/api/scan?directory=' + encodeURIComponent(dir) + '&model=' + encodeURIComponent(modelName), { method: 'POST' });
     if (res.ok) {
         pollScanProgress();
     } else {

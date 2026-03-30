@@ -15,14 +15,14 @@ def get_image_paths(directory):
                 image_paths.append(os.path.join(root, f))
     return image_paths
 
-def extract_embeddings(img_path):
+def extract_embeddings(img_path, model): #"VGG-Face"
     try:
-        representations = DeepFace.represent(img_path=img_path, model_name="VGG-Face", enforce_detection=True)
+        representations = DeepFace.represent(img_path=img_path, model_name=model, enforce_detection=True)
         return representations, None
     except Exception as e:
         return [], str(e)
 
-def process_directory(directory: str, progress_callback=None):
+def process_directory(directory: str, model: str, progress_callback=None):
     db = SessionLocal()
     errors = []
     try:
@@ -48,7 +48,7 @@ def process_directory(directory: str, progress_callback=None):
             
             # Extract embeddings if not already extracted
             if not photo.embeddings:
-                reps, err = extract_embeddings(path)
+                reps, err = extract_embeddings(path, model)
                 if err:
                     errors.append({"file": os.path.basename(path), "error": err})
                 

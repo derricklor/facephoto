@@ -53,7 +53,7 @@ def browse_directory():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to open folder dialog: {str(e)}")
 
-def run_scan(directory: str):
+def run_scan(directory: str, model: str):
     global scan_status
     scan_status["is_active"] = True
     scan_status["directory"] = directory
@@ -73,7 +73,7 @@ def run_scan(directory: str):
             else:
                 scan_status["status"] = f"Processing {current}/{total}"
 
-        process_directory(directory, progress_callback=update_progress)
+        process_directory(directory, model=model, progress_callback=update_progress)
         scan_status["status"] = "Completed"
     except Exception as e:
         scan_status["status"] = f"Error: {str(e)}"
@@ -81,14 +81,14 @@ def run_scan(directory: str):
         scan_status["is_active"] = False
 
 @app.post("/api/scan")
-def scan_directory(directory: str, background_tasks: BackgroundTasks):
+def scan_directory(directory: str, model: str, background_tasks: BackgroundTasks):
     if not os.path.exists(directory) or not os.path.isdir(directory):
         raise HTTPException(status_code=400, detail="Invalid directory path")
     
     if scan_status["is_active"]:
         raise HTTPException(status_code=400, detail="A scan is already in progress")
         
-    background_tasks.add_task(run_scan, directory)
+    background_tasks.add_task(run_scan, directory, model)
     return {"status": "Scanning started", "directory": directory}
 
 @app.get("/api/scan/progress")

@@ -48,6 +48,7 @@ const scanProgressContainer = document.getElementById('scan-progress-container')
 const scanStatusText = document.getElementById('scan-status-text');
 const scanPercentage = document.getElementById('scan-percentage');
 const scanProgressBar = document.getElementById('scan-progress-bar');
+const scanEtaText = document.getElementById('scan-eta');
 
 const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
@@ -286,6 +287,16 @@ browseBtn.onclick = async () => {
     }
 };
 
+function formatTime(seconds) {
+    if (!seconds || seconds <= 0) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    if (mins > 0) {
+        return `Estimated time remaining: ${mins}m ${secs}s`;
+    }
+    return `Estimated time remaining: ${secs}s`;
+}
+
 async function pollScanProgress() {
     const res = await fetch('/api/scan/progress');
     const data = await res.json();
@@ -301,8 +312,15 @@ async function pollScanProgress() {
         scanPercentage.innerText = `${percent}%`;
         scanProgressBar.style.width = `${percent}%`;
 
+        if (data.is_active && data.estimated_remaining > 0) {
+            scanEtaText.innerText = formatTime(data.estimated_remaining);
+            scanEtaText.classList.remove('hidden');
+        } else {
+            scanEtaText.classList.add('hidden');
+        }
+
         if (data.is_active) {
-            // Continue polling
+            // Continue polling every 1 second
             setTimeout(pollScanProgress, 1000);
         } else {
             // Finished or Error
@@ -324,6 +342,7 @@ async function pollScanProgress() {
                 // Reset for next time
                 scanProgressBar.style.width = '0%';
                 scanPercentage.innerText = '0%';
+                scanEtaText.innerText = '';
             }, 3000);
         }
     } else {

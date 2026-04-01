@@ -63,7 +63,10 @@
     <div id="scan-progress-container" class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 hidden">
         <div class="container mx-auto px-8 py-4">
             <div class="flex justify-between items-center mb-2">
-                <span id="scan-status-text" class="text-sm font-semibold text-gray-700 dark:text-slate-300">Processing photos...</span>
+                <div class="flex flex-col">
+                    <span id="scan-status-text" class="text-sm font-semibold text-gray-700 dark:text-slate-300">Processing photos...</span>
+                    <span id="scan-eta" class="text-xs text-gray-500 dark:text-slate-400 hidden"></span>
+                </div>
                 <span id="scan-percentage" class="text-sm font-bold text-blue-600 dark:text-blue-400">0%</span>
             </div>
             <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">

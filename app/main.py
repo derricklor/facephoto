@@ -13,6 +13,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="FacePhoto API")
 
+import time
+
 # Global scan status tracking
 scan_status = {
     "is_active": False,
@@ -20,7 +22,10 @@ scan_status = {
     "total": 0,
     "status": "Idle",
     "directory": "",
-    "errors": []
+    "errors": [],
+    "start_time": 0,
+    "elapsed_time": 0,
+    "estimated_remaining": 0
 }
 
 @app.get("/", response_class=HTMLResponse)
@@ -61,6 +66,8 @@ def run_scan(directory: str, model: str):
     scan_status["current"] = 0
     scan_status["total"] = 0
     scan_status["errors"] = []
+    scan_status["start_time"] = time.time()
+    scan_status["estimated_remaining"] = 0
     
     try:
         def update_progress(current, total, status_text=None, errors=None):
@@ -72,9 +79,18 @@ def run_scan(directory: str, model: str):
                 scan_status["status"] = status_text
             else:
                 scan_status["status"] = f"Processing {current}/{total}"
+            
+            # Update timing
+            if current > 0:
+                elapsed = time.time() - scan_status["start_time"]
+                scan_status["elapsed_time"] = elapsed
+                avg_time_per_item = elapsed / current
+                remaining_items = total - current
+                scan_status["estimated_remaining"] = avg_time_per_item * remaining_items
 
         process_directory(directory, model=model, progress_callback=update_progress)
         scan_status["status"] = "Completed"
+        scan_status["estimated_remaining"] = 0
     except Exception as e:
         scan_status["status"] = f"Error: {str(e)}"
     finally:
@@ -93,6 +109,13 @@ def scan_directory(directory: str, model: str, background_tasks: BackgroundTasks
 
 @app.get("/api/scan/progress")
 def get_scan_progress():
+    if scan_status["is_active"] and scan_status["current"] > 0:
+        elapsed = time.time() - scan_status["start_time"]
+        scan_status["elapsed_time"] = elapsed
+        # Recalculate just in case update_progress wasn't called recently
+        avg_time_per_item = elapsed / scan_status["current"]
+        remaining_items = scan_status["total"] - scan_status["current"]
+        scan_status["estimated_remaining"] = avg_time_per_item * remaining_items
     return scan_status
 
 @app.get("/api/groups")

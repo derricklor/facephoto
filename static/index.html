@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FacePhoto - AI Photo Organizer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
+    <link rel="stylesheet" href="output.css">
     <link rel="stylesheet" href="style.css">
     
 </head>
@@ -75,7 +70,7 @@
         </div>
     </div>
 
-    <main class="container mx-auto p-8 flex gap-8 flex-grow">
+    <main class="container mx-auto p-8 flex gap-8 grow">
         <!-- Sidebar for People -->
         <aside class="w-1/4 sticky top-24 self-start max-h-[calc(100vh-8rem)] flex flex-col">
             <div class="flex justify-between items-center mb-4">
@@ -119,7 +114,7 @@
                 </div>
             </div>
 
-            <div id="people-list" class="space-y-2 overflow-y-auto flex-grow pr-2 custom-scrollbar">
+            <div id="people-list" class="space-y-2 overflow-y-auto grow pr-2 custom-scrollbar">
                 <!-- People will be loaded here -->
                 <p class="text-gray-500 italic dark:text-slate-400 shrink-0">No people identified yet.</p>
             </div>
@@ -198,11 +193,11 @@
 
     <!-- Merge/Move Modal -->
     <div id="move-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-[32rem] max-h-[80vh] flex flex-col">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-lg max-h-[80vh] flex flex-col">
             <h3 id="move-modal-title" class="text-lg font-bold mb-2 dark:text-slate-200">Move Photos</h3>
             <p id="move-modal-desc" class="text-sm text-gray-500 dark:text-slate-400 mb-4">Select target person.</p>
             
-            <div id="move-people-list" class="flex-grow overflow-y-auto space-y-2 mb-6 border dark:border-slate-700 rounded p-2">
+            <div id="move-people-list" class="grow overflow-y-auto space-y-2 mb-6 border dark:border-slate-700 rounded p-2">
                 <!-- Targets for moving -->
             </div>
 
@@ -215,7 +210,7 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-[32rem] max-h-[80vh] flex flex-col">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-lg max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold dark:text-slate-200">Settings</h3>
                 <button id="close-settings-btn" class="text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200">
@@ -224,7 +219,7 @@
                     </svg>
                 </button>
             </div>
-            <div class="flex-grow overflow-y-auto space-y-4 mb-6">
+            <div class="grow overflow-y-auto space-y-4 mb-6">
                 <div class="p-4 border dark:border-slate-700 rounded-lg">
                     <h4 class="text-md font-bold mb-2 dark:text-slate-200">Detection Model</h4>
                     <p class="text-sm text-gray-500 dark:text-slate-400 mb-4">Select one of the following models.</p>
@@ -235,7 +230,7 @@
                     
                 </div>
             </div>
-            <div class="flex-grow overflow-y-auto space-y-4 mb-6">
+            <div class="grow overflow-y-auto space-y-4 mb-6">
                 <div class="p-4 border dark:border-slate-700 rounded-lg">
                     <h4 class="text-md font-bold mb-2 dark:text-slate-200">Maintenance</h4>
                     <p class="text-sm text-gray-500 dark:text-slate-400 mb-4">Clear unused face data and temporary files to free up space.</p>
@@ -260,10 +255,10 @@
     </div>
 
     <!-- Info/Alert Modal -->
-    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-[60]">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-[32rem] max-h-[80vh] flex flex-col">
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-60">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-lg max-h-[80vh] flex flex-col">
             <h3 id="info-modal-title" class="text-lg font-bold mb-4 dark:text-slate-200">Notification</h3>
-            <div id="info-modal-content" class="flex-grow overflow-y-auto mb-6">
+            <div id="info-modal-content" class="grow overflow-y-auto mb-6">
                 <p id="info-modal-message" class="text-sm text-gray-600 dark:text-slate-400"></p>
                 <div id="info-modal-list" class="mt-4 space-y-2 hidden">
                     <!-- Error list will be injected here -->

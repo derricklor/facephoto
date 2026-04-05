@@ -36,10 +36,6 @@ FacePhoto is a web-based, AI-powered photo organizer that automatically groups a
    source venv/bin/activate
    ```
 
-3. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
 
 ## How to Run
 
@@ -75,3 +71,24 @@ FacePhoto is a web-based, AI-powered photo organizer that automatically groups a
 - **AI/ML**: DeepFace (VGG-Face model), Scikit-Learn (DBSCAN)
 - **Frontend**: HTML5, TailwindCSS, JavaScript (Vanilla)
 - **Containerization**: Docker Compose
+
+# How to build (optional)
+
+## 1. Build Tailwind CSS (Frontend Styling)
+Since the frontend uses Tailwind CSS, you need to install the necessary CLI tools and configure the input file.
+
+First, install the required packages via npm:
+```bash
+npm install tailwindcss @tailwindcss/cli --save-dev
+```
+Next, create an input file named `input.css` (or similar) in your frontend assets directory and add the following content:
+```css
+@import "tailwindcss";
+```
+
+Finally, compile the CSS using the Tailwind CLI:
+```bash
+npx @tailwindcss/cli -i ./input.css -o ./output.css
+```
+Lastly, ensure your main HTML file (`index.html`) links to the compiled output CSS file using a `<link>` tag in the `<head>` section:
+`<link rel="stylesheet" href="output.css">`

@@ -433,7 +433,11 @@ bulkMoveBtn.onclick = () => {
         const res = await fetch(`/api/photos/bulk`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ photo_ids: selectedPhotoIds, target_person_id: moveTargetGroup.id })
+            body: JSON.stringify({ 
+                photo_ids: selectedPhotoIds, 
+                source_person_id: selectedGroup.id,
+                target_person_id: moveTargetGroup.id 
+            })
         });
         if (res.ok) { moveModal.classList.add('hidden'); clearSelection(); await fetchGroups(); }
     });
@@ -444,7 +448,11 @@ bulkDeleteBtn.onclick = async () => {
     const res = await fetch(`/api/photos/bulk`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photo_ids: selectedPhotoIds, target_person_id: null })
+        body: JSON.stringify({ 
+            photo_ids: selectedPhotoIds, 
+            source_person_id: selectedGroup.id,
+            target_person_id: null 
+        })
     });
     if (res.ok) { clearSelection(); await fetchGroups(); }
 };

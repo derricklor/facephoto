@@ -27,6 +27,8 @@ class FaceEmbedding(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     photo_id = Column(Integer, ForeignKey("photos.id"))
+    # Name of the face embedding model used
+    model = Column(String, index=True)
     # Embedding vector stored as JSON
     embedding = Column(JSON)
     # Location of the face in the image

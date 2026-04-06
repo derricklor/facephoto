@@ -46,8 +46,12 @@ def process_directory(directory: str, model: str, progress_callback=None):
                 db.commit()
                 db.refresh(photo)
             
-            # Extract embeddings if not already extracted
-            if not photo.embeddings:
+
+            # Extract embeddings if not already extracted for the selected model
+            existing_embs = [e for e in photo.embeddings if e.model == model]
+            if not existing_embs:
+                # If embeddings for other models exist, we can clear them or keep them. 
+                # For clustering to work, we only use embeddings from the same model.
                 reps, err = extract_embeddings(path, model)
                 if err:
                     errors.append({"file": os.path.basename(path), "error": err})
@@ -56,12 +60,12 @@ def process_directory(directory: str, model: str, progress_callback=None):
                     embedding = rep["embedding"]
                     region = rep["facial_area"]
                     
-                    face_emb = FaceEmbedding(photo_id=photo.id, embedding=embedding, region=region)
+                    face_emb = FaceEmbedding(photo_id=photo.id, embedding=embedding, region=region, model=model)
                     db.add(face_emb)
                     all_embeddings.append(embedding)
                     mapping.append((photo.id, i, region))
             else:
-                for face_emb in photo.embeddings:
+                for face_emb in existing_embs:
                     all_embeddings.append(face_emb.embedding)
                     mapping.append((photo.id, 0, face_emb.region))
         

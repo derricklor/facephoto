@@ -16,7 +16,7 @@ FacePhoto is a web-based, AI-powered photo organizer that automatically groups a
 
 ### Prerequisites
 
-- **Python 3.10+**
+- **Python 3.10-3.13**
 - **Docker Desktop** (for running the PostgreSQL database)
 
 ### Setup Steps
@@ -35,7 +35,10 @@ FacePhoto is a web-based, AI-powered photo organizer that automatically groups a
    # On macOS/Linux:
    source venv/bin/activate
    ```
-
+3. **Install requirements**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## How to Run
 

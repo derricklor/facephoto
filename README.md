@@ -91,7 +91,7 @@ Next, create an input file named `input.css` (or similar) in your frontend asset
 
 Finally, compile the CSS using the Tailwind CLI:
 ```bash
-npx @tailwindcss/cli -i ./input.css -o ./output.css
+npx @tailwindcss/cli -i ./static/input.css -o ./static/output.css
 ```
 Lastly, ensure your main HTML file (`index.html`) links to the compiled output CSS file using a `<link>` tag in the `<head>` section:
 `<link rel="stylesheet" href="output.css">`

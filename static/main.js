@@ -180,7 +180,7 @@ function renderPeople(groups) {
         div.innerHTML = `
                     <img src="/api/image?path=${encodeURIComponent(group.thumbnail)}" class="w-12 h-12 rounded-full object-cover bg-gray-200 dark:bg-slate-700">
                     <div>
-                        <p class="font-semibold dark:text-slate-200">${group.name}</p>
+                        <p class="font-semibold text-gray-500 dark:text-slate-200">${group.name}</p>
                         <p class="text-sm text-gray-500 dark:text-slate-400">${group.photo_count} photos</p>
                     </div>
                 `;
@@ -263,8 +263,8 @@ function clearSelection() {
 clearSelectionBtn.onclick = clearSelection;
 
 function openZoom(src) {
-    zoomImg.src = src;
     zoomOverlay.style.display = 'flex';
+    zoomImg.src = src;
     document.body.style.overflow = 'hidden';
 }
 
@@ -303,10 +303,10 @@ async function pollScanProgress() {
 
     if (data.is_active || data.status === 'Completed' || data.status.startsWith('Error')) {
         scanProgressContainer.classList.remove('hidden');
-        
+
         // Calculate percentage
         const percent = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
-        
+
         // Update UI
         scanStatusText.innerText = data.status;
         scanPercentage.innerText = `${percent}%`;
@@ -335,7 +335,7 @@ async function pollScanProgress() {
             } else if (data.status.startsWith('Error')) {
                 await showInfo('Scan Error', data.status);
             }
-            
+
             // Hide progress after a delay
             setTimeout(() => {
                 scanProgressContainer.classList.add('hidden');
@@ -433,10 +433,10 @@ bulkMoveBtn.onclick = () => {
         const res = await fetch(`/api/photos/bulk`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                photo_ids: selectedPhotoIds, 
+            body: JSON.stringify({
+                photo_ids: selectedPhotoIds,
                 source_person_id: selectedGroup.id,
-                target_person_id: moveTargetGroup.id 
+                target_person_id: moveTargetGroup.id
             })
         });
         if (res.ok) { moveModal.classList.add('hidden'); clearSelection(); await fetchGroups(); }
@@ -448,10 +448,10 @@ bulkDeleteBtn.onclick = async () => {
     const res = await fetch(`/api/photos/bulk`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            photo_ids: selectedPhotoIds, 
+        body: JSON.stringify({
+            photo_ids: selectedPhotoIds,
             source_person_id: selectedGroup.id,
-            target_person_id: null 
+            target_person_id: null
         })
     });
     if (res.ok) { clearSelection(); await fetchGroups(); }
@@ -485,7 +485,7 @@ deletePersonBtn.onclick = async () => {
     }
 };
 
-settingsBtn.onclick = () => {settingsModal.classList.remove('hidden');console.log('Open settings modal');};
+settingsBtn.onclick = () => { settingsModal.classList.remove('hidden'); console.log('Open settings modal'); };
 closeSettingsBtn.onclick = () => settingsModal.classList.add('hidden');
 settingsOkBtn.onclick = () => settingsModal.classList.add('hidden');
 

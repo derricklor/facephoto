@@ -172,7 +172,7 @@ function renderPeople(groups) {
         div.className = 'flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg shadow cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition person-item';
         div.dataset.id = group.id;
         if (selectedGroup && selectedGroup.id === group.id) {
-            div.classList.add('selected-person');
+            div.classList.add('border-2 border-blue-500 bg-gray-100 dark:bg-gray-800');
         }
 
         div.onclick = () => selectPerson(group);
@@ -210,7 +210,7 @@ function renderPhotos(group) {
     photoGrid.innerHTML = '';
     group.photos.forEach(photo => {
         const card = document.createElement('div');
-        card.className = 'photo-card group';
+        card.className = 'group relative';
 
         const imgSrc = `/api/image?path=${encodeURIComponent(photo.path)}`;
         const img = document.createElement('img');
@@ -223,7 +223,7 @@ function renderPhotos(group) {
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.className = 'photo-checkbox opacity-0 group-hover:opacity-100 checked:opacity-100 transition-opacity duration-200';
+        checkbox.className = 'photo-checkbox absolute bottom-4 right-4 w-6 h-6 cursor-pointer z-10 opacity-0 group-hover:opacity-100 checked:opacity-100 transition-opacity duration-200';
         checkbox.onclick = (e) => e.stopPropagation();
         checkbox.onchange = (e) => {
             if (e.target.checked) {
@@ -263,14 +263,17 @@ function clearSelection() {
 clearSelectionBtn.onclick = clearSelection;
 
 function openZoom(src) {
-    zoomOverlay.style.display = 'flex';
+    zoomOverlay.classList.remove('hidden');
+    zoomOverlay.classList.add('flex');
     zoomImg.src = src;
+    zoomImg.classList.add("w-full h-full object-contain user-select-none");
     document.body.style.overflow = 'hidden';
 }
 
 function closeZoomOverlay() {
-    zoomOverlay.style.display = 'none';
+    zoomOverlay.classList.add('hidden');
     zoomImg.src = '';
+    zoomImg.classList.remove("w-full h-full object-contain user-select-none");
     document.body.style.overflow = 'auto';
 }
 
@@ -397,6 +400,7 @@ function openMoveModal(title, desc, onConfirm) {
     moveTargetGroup = null;
     confirmMoveBtn.disabled = true;
     movePeopleList.innerHTML = '';
+    const mergeTargetStyles = "border-2 border-green-500 bg-white dark:bg-green-800";
 
     const targets = allGroups.filter(g => g.id !== (isBulkMode ? -1 : selectedGroup.id));
     targets.forEach(group => {
@@ -404,8 +408,8 @@ function openMoveModal(title, desc, onConfirm) {
         div.className = 'flex items-center gap-3 p-2 border dark:border-slate-700 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition merge-target-item';
         div.onclick = () => {
             moveTargetGroup = group;
-            document.querySelectorAll('.merge-target-item').forEach(el => el.classList.remove('merge-target'));
-            div.classList.add('merge-target');
+            document.querySelectorAll('.merge-target-item').forEach(el => el.classList.remove(mergeTargetStyles));
+            div.classList.add(mergeTargetStyles);
             confirmMoveBtn.disabled = false;
         };
         div.innerHTML = `
@@ -485,7 +489,7 @@ deletePersonBtn.onclick = async () => {
     }
 };
 
-settingsBtn.onclick = () => { settingsModal.classList.remove('hidden'); console.log('Open settings modal'); };
+settingsBtn.onclick = () => settingsModal.classList.remove('hidden');
 closeSettingsBtn.onclick = () => settingsModal.classList.add('hidden');
 settingsOkBtn.onclick = () => settingsModal.classList.add('hidden');
 

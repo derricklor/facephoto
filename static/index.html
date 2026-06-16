@@ -300,15 +300,28 @@
                     <h4 class="text-md font-bold mb-2 dark:text-slate-200">Maintenance</h4>
                     <p class="text-sm text-gray-500 dark:text-slate-400 mb-4">Clear unused face data and temporary files
                         to free up space.</p>
-                    <button id="clear-cache-btn"
-                        class="w-full px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded font-semibold transition flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor" class="w-4 h-4">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                        </svg>
-                        Clear Cache
-                    </button>
+                    <div class="flex flex-col gap-3">
+                        <button id="clear-cache-btn"
+                            class="w-full px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded font-semibold transition flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                            Clear Cache
+                        </button>
+                        <button id="reset-db-btn"
+                            class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-semibold transition flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Hard Reset Database
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="flex justify-end">
@@ -318,10 +331,43 @@
         </div>
     </div>
 
+    <!-- Reset Confirmation Modal -->
+    <div id="reset-confirm-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-55">
+        <div
+            class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-96 border border-red-200 dark:border-red-900/50 animate-in fade-in zoom-in duration-200">
+            <div class="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-6 h-6 shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 class="text-lg font-bold">Confirm Database Reset</h3>
+            </div>
+            <p class="text-sm text-gray-650 dark:text-slate-350 text-gray-600 dark:text-slate-400 mb-4">
+                This will permanently delete all scanned photos, face embeddings, and identified groups. This action is
+                irreversible.
+            </p>
+            <p class="text-xs text-gray-500 dark:text-slate-500 mb-2">
+                Please type <span class="font-bold text-red-650 dark:text-red-400 select-all">RESET</span> to confirm:
+            </p>
+            <input id="reset-confirm-input" type="text"
+                class="w-full border dark:border-slate-700 dark:bg-slate-700 dark:text-white p-2 rounded mb-6 outline-none focus:ring-2 focus:ring-red-500 text-center font-bold tracking-widest uppercase"
+                placeholder="Type RESET here">
+            <div class="flex justify-end gap-3">
+                <button id="cancel-reset-confirm-btn"
+                    class="px-4 py-2 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded font-semibold transition">Cancel</button>
+                <button id="confirm-reset-db-btn"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>Reset Database</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Zoom Overlay -->
     <div id="zoom-overlay"
         class="hidden fixed inset-0 w-full h-full bg-black/75 z-100 justify-center items-center cursor-zoom-out">
-        <span id="close-zoom" class="absolute top-4 right-4 text-white text-4xl cursor-pointer z-101">×</span>
+        <span id="close-zoom" class="absolute top-4 right-4 text-white text-4xl cursor-pointer z-101">&times;</span>
         <img id="zoom-img" src="" alt="Zoomed Photo">
     </div>
 

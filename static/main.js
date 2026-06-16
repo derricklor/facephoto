@@ -57,6 +57,11 @@ const settingsOkBtn = document.getElementById('settings-ok-btn');
 const clearCacheBtn = document.getElementById('clear-cache-btn');
 const modelSelect = document.getElementById('model-select');
 
+const resetConfirmModal = document.getElementById('reset-confirm-modal');
+const resetConfirmInput = document.getElementById('reset-confirm-input');
+const cancelResetConfirmBtn = document.getElementById('cancel-reset-confirm-btn');
+const confirmResetDbBtn = document.getElementById('confirm-reset-db-btn');
+
 let selectedGroup = null;
 let moveTargetGroup = null;
 let allGroups = [];
@@ -177,8 +182,9 @@ function renderPeople(groups) {
 
         div.onclick = () => selectPerson(group);
 
+        const thumbnailSrc = group.thumbnail && group.thumbnail.startsWith('/') ? group.thumbnail : (group.thumbnail ? `/api/image?path=${encodeURIComponent(group.thumbnail)}` : '');
         div.innerHTML = `
-                    <img src="/api/image?path=${encodeURIComponent(group.thumbnail)}" class="w-12 h-12 rounded-full object-cover bg-gray-200 dark:bg-slate-700">
+                    <img src="${thumbnailSrc}" class="w-12 h-12 rounded-full object-cover bg-gray-200 dark:bg-slate-700">
                     <div>
                         <p class="font-semibold text-gray-500 dark:text-slate-200">${group.name}</p>
                         <p class="text-sm text-gray-500 dark:text-slate-400">${group.photo_count} photos</p>
@@ -412,8 +418,9 @@ function openMoveModal(title, desc, onConfirm) {
             div.classList.add(mergeTargetStyles);
             confirmMoveBtn.disabled = false;
         };
+        const thumbnailSrc = group.thumbnail && group.thumbnail.startsWith('/') ? group.thumbnail : (group.thumbnail ? `/api/image?path=${encodeURIComponent(group.thumbnail)}` : '');
         div.innerHTML = `
-                    <img src="/api/image?path=${encodeURIComponent(group.thumbnail)}" class="w-10 h-10 rounded-full object-cover">
+                    <img src="${thumbnailSrc}" class="w-10 h-10 rounded-full object-cover">
                     <div><p class="text-sm font-semibold dark:text-slate-200">${group.name}</p></div>
                 `;
         movePeopleList.appendChild(div);
@@ -501,6 +508,51 @@ clearCacheBtn.onclick = async () => {
         await showInfo('Cache Cleared', `${data.status}: Removed ${data.count} orphaned photo entries.`);
     } else {
         await showInfo('Clear Failed', 'Failed to clear cache.');
+    }
+};
+
+const resetDbBtn = document.getElementById('reset-db-btn');
+resetDbBtn.onclick = () => {
+    resetConfirmInput.value = '';
+    confirmResetDbBtn.disabled = true;
+    settingsModal.classList.add('hidden');
+    resetConfirmModal.classList.remove('hidden');
+    resetConfirmInput.focus();
+};
+
+cancelResetConfirmBtn.onclick = () => {
+    resetConfirmModal.classList.add('hidden');
+    settingsModal.classList.remove('hidden');
+};
+
+resetConfirmInput.oninput = (e) => {
+    confirmResetDbBtn.disabled = e.target.value.trim().toUpperCase() !== 'RESET';
+};
+
+confirmResetDbBtn.onclick = async () => {
+    resetConfirmModal.classList.add('hidden');
+    try {
+        const res = await fetch('/api/resetdb', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            await showInfo('Database Reset', 'The database has been reset successfully. All cached entries and group associations have been removed.');
+            selectedGroup = null;
+            controlPanel.classList.add('hidden');
+            photoGrid.innerHTML = '';
+            galleryTitle.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-blue-500 inline mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+                All Photos
+            `;
+            await fetchGroups();
+        } else {
+            await showInfo('Reset Failed', 'Failed to reset database: ' + (data.detail || 'Unknown error'));
+            settingsModal.classList.remove('hidden');
+        }
+    } catch (err) {
+        await showInfo('Reset Failed', 'Failed to reset database: ' + err.message);
+        settingsModal.classList.remove('hidden');
     }
 };
 

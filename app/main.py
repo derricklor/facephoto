@@ -39,6 +39,40 @@ def get_image(path: str):
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(path)
 
+@app.get("/api/face/{embedding_id}/thumbnail")
+def get_face_thumbnail(embedding_id: int, db: Session = Depends(get_db)):
+    face_emb = db.query(FaceEmbedding).filter(FaceEmbedding.id == embedding_id).first()
+    if not face_emb:
+        raise HTTPException(status_code=404, detail="Face embedding not found")
+    
+    photo_path = face_emb.photo.path
+    if not os.path.exists(photo_path):
+        raise HTTPException(status_code=404, detail="Original photo not found")
+        
+    try:
+        from PIL import Image
+        import io
+        from fastapi.responses import StreamingResponse
+        
+        region = face_emb.region
+        x, y, w, h = region['x'], region['y'], region['w'], region['h']
+        
+        with Image.open(photo_path) as img:
+            box = (x, y, x + w, y + h)
+            cropped = img.crop(box)
+            
+            img_io = io.BytesIO()
+            fmt = img.format if img.format else "JPEG"
+            cropped.save(img_io, format=fmt)
+            img_io.seek(0)
+            
+            media_type = f"image/{fmt.lower()}"
+            if fmt.lower() == "jpg":
+                media_type = "image/jpeg"
+            return StreamingResponse(img_io, media_type=media_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to crop face: {str(e)}")
+
 @app.get("/api/browse")
 def browse_directory():
     try:
@@ -123,11 +157,23 @@ def get_groups(db: Session = Depends(get_db)):
     people = db.query(Person).all()
     result = []
     for person in people:
-        photos = [{"id": p.id, "path": p.path} for p in person.photos]
+        seen_photo_ids = set()
+        photos = []
+        for emb in person.embeddings:
+            if emb.photo and emb.photo.id not in seen_photo_ids:
+                seen_photo_ids.add(emb.photo.id)
+                photos.append({"id": emb.photo.id, "path": emb.photo.path})
+        
+        thumbnail = None
+        if person.embeddings:
+            thumbnail = f"/api/face/{person.embeddings[0].id}/thumbnail"
+        elif person.thumbnail_path:
+            thumbnail = f"/api/image?path={person.thumbnail_path}"
+            
         result.append({
             "id": person.id,
             "name": person.name,
-            "thumbnail": person.thumbnail_path,
+            "thumbnail": thumbnail,
             "photo_count": len(photos),
             "photos": photos
         })
@@ -135,15 +181,20 @@ def get_groups(db: Session = Depends(get_db)):
 
 class BulkPhotoUpdate(BaseModel):
     photo_ids: list[int]
+    source_person_id: int | None = None
     target_person_id: int | None = None
 
 @app.patch("/api/photos/bulk")
 def bulk_update_photos(update: BulkPhotoUpdate, db: Session = Depends(get_db)):
-    photos = db.query(Photo).filter(Photo.id.in_(update.photo_ids)).all()
-    for photo in photos:
-        photo.person_id = update.target_person_id
+    embeddings = db.query(FaceEmbedding).filter(
+        FaceEmbedding.photo_id.in_(update.photo_ids),
+        FaceEmbedding.person_id == update.source_person_id
+    ).all()
+    
+    for emb in embeddings:
+        emb.person_id = update.target_person_id
     db.commit()
-    return {"status": "Photos updated", "count": len(photos)}
+    return {"status": "Photos updated", "count": len(embeddings)}
 
 class PersonUpdate(BaseModel):
     name: str
@@ -168,9 +219,8 @@ def merge_people(person_id: int, target_id: int, db: Session = Depends(get_db)):
     if person_id == target_id:
         raise HTTPException(status_code=400, detail="Cannot merge a person with themselves")
     
-    photos_to_move = list(source_person.photos)
-    for photo in photos_to_move:
-        photo.person_id = target_id
+    for emb in source_person.embeddings:
+        emb.person_id = target_id
     
     db.commit()
     db.delete(source_person)
@@ -198,15 +248,21 @@ def export_person(person_id: int, db: Session = Depends(get_db)):
         if not dest_root:
             return {"status": "Cancelled"}
             
-        # Clean name for filesystem
         safe_name = "".join([c for c in person.name if c.isalnum() or c in (' ', '.', '_')]).strip()
         export_path = os.path.join(dest_root, safe_name)
         
         if not os.path.exists(export_path):
             os.makedirs(export_path)
             
+        seen_photo_ids = set()
+        unique_photos = []
+        for emb in person.embeddings:
+            if emb.photo and emb.photo.id not in seen_photo_ids:
+                seen_photo_ids.add(emb.photo.id)
+                unique_photos.append(emb.photo)
+                
         count = 0
-        for photo in person.photos:
+        for photo in unique_photos:
             if os.path.exists(photo.path):
                 filename = os.path.basename(photo.path)
                 target_file = os.path.join(export_path, filename)
@@ -226,28 +282,38 @@ def delete_person(person_id: int, db: Session = Depends(get_db)):
     person = db.query(Person).filter(Person.id == person_id).first()
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
-    for photo in person.photos:
-        photo.person_id = None
+    for emb in person.embeddings:
+        emb.person_id = None
     db.delete(person)
     db.commit()
     return {"status": "Person deleted", "id": person_id}
 
 @app.delete("/api/clearcache")
 def clear_cache(db: Session = Depends(get_db)):
-    # Query photos with no person_id
-    orphaned_photos = db.query(Photo).filter(Photo.person_id == None).all()
+    from sqlalchemy import not_
+    orphaned_photos = db.query(Photo).filter(
+        not_(Photo.embeddings.any(FaceEmbedding.person_id != None))
+    ).all()
     photo_ids = [p.id for p in orphaned_photos]
     
     if not photo_ids:
         return {"status": "Cache already clear", "count": 0}
 
-    # Delete face embeddings for these photos
     db.query(FaceEmbedding).filter(FaceEmbedding.photo_id.in_(photo_ids)).delete(synchronize_session=False)
-    
-    # Delete the photos themselves
     db.query(Photo).filter(Photo.id.in_(photo_ids)).delete(synchronize_session=False)
-    
     db.commit()
     return {"status": "Cache cleared", "count": len(photo_ids)}
+
+@app.post("/api/resetdb")
+def reset_db(db: Session = Depends(get_db)):
+    try:
+        from app.database import engine, Base
+        # Import models to register them before drop/create
+        from app.models import Photo, Person, FaceEmbedding
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        return {"status": "Database reset successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database reset failed: {str(e)}")
 
 app.mount("/", StaticFiles(directory="static"), name="static")

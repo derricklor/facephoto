@@ -11,6 +11,7 @@ class Person(Base):
     thumbnail_path = Column(String, nullable=True)
     
     photos = relationship("Photo", back_populates="person")
+    embeddings = relationship("FaceEmbedding", back_populates="person")
 
 class Photo(Base):
     __tablename__ = "photos"
@@ -27,6 +28,7 @@ class FaceEmbedding(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     photo_id = Column(Integer, ForeignKey("photos.id"))
+    person_id = Column(Integer, ForeignKey("people.id"), nullable=True)
     # Name of the face embedding model used
     model = Column(String, index=True)
     # Embedding vector stored as JSON
@@ -35,3 +37,4 @@ class FaceEmbedding(Base):
     region = Column(JSON)
     
     photo = relationship("Photo", back_populates="embeddings")
+    person = relationship("Person", back_populates="embeddings")

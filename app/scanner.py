@@ -29,7 +29,7 @@ def process_directory(directory: str, model: str, progress_callback=None):
         image_paths = get_image_paths(directory)
         total_photos = len(image_paths)
         all_embeddings = []
-        mapping = [] # stores (photo_id, embedding_index_in_photo, region)
+        mapping = [] # stores FaceEmbedding objects
 
         if progress_callback:
             progress_callback(0, total_photos, "Scanning directory...")
@@ -50,24 +50,23 @@ def process_directory(directory: str, model: str, progress_callback=None):
             # Extract embeddings if not already extracted for the selected model
             existing_embs = [e for e in photo.embeddings if e.model == model]
             if not existing_embs:
-                # If embeddings for other models exist, we can clear them or keep them. 
-                # For clustering to work, we only use embeddings from the same model.
                 reps, err = extract_embeddings(path, model)
                 if err:
                     errors.append({"file": os.path.basename(path), "error": err})
                 
-                for i, rep in enumerate(reps):
+                for rep in reps:
                     embedding = rep["embedding"]
                     region = rep["facial_area"]
                     
                     face_emb = FaceEmbedding(photo_id=photo.id, embedding=embedding, region=region, model=model)
                     db.add(face_emb)
+                    db.flush()
                     all_embeddings.append(embedding)
-                    mapping.append((photo.id, i, region))
+                    mapping.append(face_emb)
             else:
                 for face_emb in existing_embs:
                     all_embeddings.append(face_emb.embedding)
-                    mapping.append((photo.id, 0, face_emb.region))
+                    mapping.append(face_emb)
         
         if all_embeddings:
             if progress_callback:
@@ -105,15 +104,18 @@ def cluster_faces(embeddings, mapping, db: Session):
         db.commit()
         db.refresh(person)
         
-        # Assign photos to this person
+        # Assign embeddings to this person
         indices = np.where(labels == label)[0]
         for idx in indices:
-            photo_id, _, _ = mapping[idx]
-            photo = db.query(Photo).filter(Photo.id == photo_id).first()
-            if photo:
-                photo.person_id = person.id
-                # Use the first photo as a thumbnail for now
-                if not person.thumbnail_path:
-                    person.thumbnail_path = photo.path
+            face_emb = mapping[idx]
+            face_emb.person_id = person.id
+            
+            # Use the first photo as a thumbnail for now
+            if not person.thumbnail_path:
+                person.thumbnail_path = face_emb.photo.path
         
         db.commit()
+
+    # Clean up orphaned people (those with 0 embeddings)
+    db.query(Person).filter(~Person.embeddings.any()).delete(synchronize_session=False)
+    db.commit()

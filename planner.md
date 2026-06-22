@@ -24,6 +24,7 @@ Support extracting multiple faces from a single photo and clustering them indepe
 
 ### 2. Scanner & Clustering Enhancements
 - [ ] **Incremental scanning**: Only scan new/modified files rather than re-scanning the entire directory.
+- [ ] **Cosine distance metric**: Implement face embedding distance metric using cosine distance.
 - [ ] **Configurable clustering parameters**: Allow adjusting DBSCAN distance metric and epsilon threshold from the settings UI.
 - [ ] **Model selection enhancements**: Allow changing facial recognition models (e.g., Facenet, ArcFace) with automatic database partitioning.
 

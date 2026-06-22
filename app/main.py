@@ -162,7 +162,19 @@ def get_groups(db: Session = Depends(get_db)):
         for emb in person.embeddings:
             if emb.photo and emb.photo.id not in seen_photo_ids:
                 seen_photo_ids.add(emb.photo.id)
-                photos.append({"id": emb.photo.id, "path": emb.photo.path})
+                photo_embs = []
+                for p_emb in emb.photo.embeddings:
+                    photo_embs.append({
+                        "id": p_emb.id,
+                        "region": p_emb.region,
+                        "person_id": p_emb.person_id,
+                        "person_name": p_emb.person.name if p_emb.person else "Unknown"
+                    })
+                photos.append({
+                    "id": emb.photo.id,
+                    "path": emb.photo.path,
+                    "faces": photo_embs
+                })
         
         thumbnail = None
         if person.embeddings:

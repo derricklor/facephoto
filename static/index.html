@@ -366,9 +366,25 @@
 
     <!-- Zoom Overlay -->
     <div id="zoom-overlay"
-        class="hidden fixed inset-0 w-full h-full bg-black/75 z-100 justify-center items-center cursor-zoom-out">
-        <span id="close-zoom" class="absolute top-4 right-4 text-white text-4xl cursor-pointer z-101">&times;</span>
-        <img id="zoom-img" src="" alt="Zoomed Photo">
+        class="hidden fixed inset-0 w-full h-full bg-black/50 z-100 justify-center items-center overflow-auto cursor-zoom-out">
+        <span id="close-zoom"
+            class="absolute top-4 right-4 text-white text-4xl cursor-pointer z-101 hover:text-gray-300 transition">&times;</span>
+
+        <!-- Container for image and face overlays -->
+        <div id="zoom-container" class="relative m-auto">
+            <!-- Toggle control for bounding boxes -->
+            <div id="zoom-controls"
+                class="absolute top-4 left-4 flex items-center gap-2 text-white bg-black/60 px-3 py-1.5 rounded-lg border border-slate-700/50 z-101">
+                <input type="checkbox" id="toggle-bboxes" checked
+                    class="w-4 h-4 cursor-pointer accent-blue-500 rounded border-gray-350">
+                <label for="toggle-bboxes" class="cursor-pointer text-sm font-semibold select-none">Show Face
+                    Boxes</label>
+            </div>
+
+            <img id="zoom-img" src="" alt="Zoomed Photo"
+                class="max-w-[100vw] max-h-[100vh] w-auto h-auto block rounded shadow-2xl cursor-zoom-in">
+            <div id="bbox-container" class="absolute inset-0 pointer-events-none"></div>
+        </div>
     </div>
 
     <!-- Info/Alert Modal -->

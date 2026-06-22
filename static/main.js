@@ -32,6 +32,10 @@ const clearSelectionBtn = document.getElementById('clear-selection-btn');
 const zoomOverlay = document.getElementById('zoom-overlay');
 const zoomImg = document.getElementById('zoom-img');
 const closeZoom = document.getElementById('close-zoom');
+const zoomContainer = document.getElementById('zoom-container');
+const zoomControls = document.getElementById('zoom-controls');
+const toggleBboxesCheckbox = document.getElementById('toggle-bboxes');
+const bboxContainer = document.getElementById('bbox-container');
 
 const darkModeToggle = document.getElementById('dark-mode-toggle');
 const sunIcon = document.getElementById('sun-icon');
@@ -224,7 +228,7 @@ function renderPhotos(group) {
         img.className = 'w-full h-48 object-cover rounded shadow-md hover:opacity-90 transition cursor-zoom-in';
         img.onclick = (e) => {
             e.stopPropagation();
-            openZoom(imgSrc);
+            openZoom(photo);
         };
 
         const checkbox = document.createElement('input');
@@ -268,25 +272,91 @@ function clearSelection() {
 
 clearSelectionBtn.onclick = clearSelection;
 
-function openZoom(src) {
+let currentPhotoFaces = [];
+
+// Prevent closing when clicking inner parts of the overlay
+zoomContainer.onclick = (e) => e.stopPropagation();
+zoomControls.onclick = (e) => e.stopPropagation();
+
+toggleBboxesCheckbox.onchange = () => {
+    drawBoundingBoxes();
+};
+
+function drawBoundingBoxes() {
+    bboxContainer.innerHTML = '';
+    if (!toggleBboxesCheckbox.checked) return;
+
+    const origWidth = zoomImg.naturalWidth;
+    const origHeight = zoomImg.naturalHeight;
+    if (!origWidth || !origHeight) return;
+
+    const displayWidth = zoomImg.clientWidth;
+    const displayHeight = zoomImg.clientHeight;
+
+    const scaleX = displayWidth / origWidth;
+    const scaleY = displayHeight / origHeight;
+
+    currentPhotoFaces.forEach(face => {
+        const region = face.region;
+        if (!region) return;
+
+        const box = document.createElement('div');
+        box.className = 'absolute border-2 border-white/50 group/box';
+        box.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+        box.style.left = `${region.x * scaleX}px`;
+        box.style.top = `${region.y * scaleY}px`;
+        box.style.width = `${region.w * scaleX}px`;
+        box.style.height = `${region.h * scaleY}px`;
+
+        // Premium hover label with person name
+        const label = document.createElement('div');
+        label.className = 'absolute bottom-full left-0 mb-1 px-1.5 py-0.5 text-xs text-white bg-black/75 rounded opacity-0 group-hover/box:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10';
+        label.innerText = face.person_name || 'Unknown';
+
+        box.appendChild(label);
+        bboxContainer.appendChild(box);
+    });
+}
+
+function openZoom(photo) {
     zoomOverlay.classList.remove('hidden');
     zoomOverlay.classList.add('flex');
-    zoomImg.src = src;
-    zoomImg.classList.add("w-full h-full object-contain user-select-none");
+    const imgSrc = `/api/image?path=${encodeURIComponent(photo.path)}`;
+    zoomImg.src = imgSrc;
+    currentPhotoFaces = photo.faces || [];
     document.body.style.overflow = 'hidden';
 }
+
+zoomImg.onload = () => {
+    drawBoundingBoxes();
+};
 
 function closeZoomOverlay() {
     zoomOverlay.classList.add('hidden');
     zoomImg.src = '';
-    zoomImg.classList.remove("w-full h-full object-contain user-select-none");
+    bboxContainer.innerHTML = '';
+    currentPhotoFaces = [];
     document.body.style.overflow = 'auto';
 }
 
-zoomOverlay.onclick = closeZoomOverlay;
-closeZoom.onclick = (e) => { e.stopPropagation(); closeZoomOverlay(); };
+zoomOverlay.onclick = (e) => {
+    if (e.target === zoomOverlay) {
+        closeZoomOverlay();
+    }
+};
+
+closeZoom.onclick = (e) => {
+    e.stopPropagation();
+    closeZoomOverlay();
+};
 
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeZoomOverlay(); });
+
+window.addEventListener('resize', () => {
+    if (!zoomOverlay.classList.contains('hidden')) {
+        drawBoundingBoxes();
+    }
+});
 
 browseBtn.onclick = async () => {
     const res = await fetch('/api/browse');
